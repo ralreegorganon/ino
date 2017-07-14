@@ -2,12 +2,6 @@
 
 
 [[projects]]
-  name = "github.com/davecgh/go-spew"
-  packages = ["spew"]
-  revision = "346938d642f2ec3594ed81d874461961cd0faa76"
-  version = "v1.1.0"
-
-[[projects]]
   branch = "master"
   name = "github.com/jmoiron/sqlx"
   packages = [".","reflectx"]
@@ -46,6 +40,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "a243e4f44d7f916ba1aef4ba464d2bd5b68b7faf6d952334f377ff3eb83c615c"
+  inputs-digest = "af15527a67bcc732c5cb9e9e182436630a948d3573750ab52af21738c2dfebfb"
   solver-name = "gps-cdcl"
   solver-version = 1
