@@ -88,5 +88,7 @@ func (m *Monstah) postprocess() {
 			log.WithField("err", err).Error("Couldn't insert message to database")
 			continue
 		}
+
+		m.DB.UpdateVessel(o)
 	}
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"time"
@@ -50,6 +51,17 @@ func main() {
 	port := ":33000"
 	go r.ListenAndAcceptClients(port)
 	go m.Decode(port)
+
+	server := ino.NewHTTPServer(&db)
+	router, err := ino.CreateRouter(server)
+	if err != nil {
+		log.Fatal(err)
+	}
+	http.Handle("/", router)
+
+	u := "0.0.0.0:8989"
+	go http.ListenAndServe(u, nil)
+	log.WithField("address", u).Info("ino web server started")
 
 	<-interrupt
 	m.Shutdown()
