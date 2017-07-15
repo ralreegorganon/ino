@@ -39,8 +39,8 @@ func (db *DB) AddMessage(r *nmeaais.DecoderResult) error {
 	return nil
 }
 
-func (db *DB) GetVessels() ([]Vessel, error) {
-	vessels := []Vessel{}
+func (db *DB) GetVessels() ([]*Vessel, error) {
+	vessels := []*Vessel{}
 	err := db.Select(&vessels, `
 		select 
 			mmsi, 
@@ -65,6 +65,56 @@ func (db *DB) GetVessels() ([]Vessel, error) {
 		return nil, err
 	}
 	return vessels, nil
+}
+
+func (db *DB) GetVessel(mmsi int) (*Vessel, error) {
+	vessel := &Vessel{}
+	err := db.Get(vessel, `
+		select 
+			mmsi, 
+			vessel_name, 
+			call_sign, 
+			ship_type, 
+			length, 
+			breadth, 
+			draught, 
+			latitude, 
+			longitude, 
+			speed_over_ground, 
+			true_heading, 
+			course_over_ground, 
+			navigation_status, 
+			destination, 
+			updated_at 
+		from 
+			vessel
+		where
+			mmsi = $1
+	`, mmsi)
+	if err != nil {
+		return nil, err
+	}
+	return vessel, nil
+}
+
+func (db *DB) GetPositionsForVessel(mmsi int) ([]*Position, error) {
+	positions := []*Position{}
+	err := db.Select(&positions, `
+		select 
+			mmsi, 
+			latitude, 
+			longitude, 
+			created_at 
+		from 
+			position
+		where
+			mmsi = $1
+		order by created_at desc
+	`, mmsi)
+	if err != nil {
+		return nil, err
+	}
+	return positions, nil
 }
 
 func (db *DB) UpdateVesselFromPositionReportClassA(m *nmeaais.PositionReportClassA) error {
@@ -174,6 +224,36 @@ func (db *DB) UpdateVesselFromStaticDataReportB(m *nmeaais.StaticDataReportB) er
 		updated_at = EXCLUDED.updated_at
 	`
 	_, err := db.Exec(sql, m.MMSI, m.CallSign, m.ShipType, m.DimensionToBow+m.DimensionToStern, m.DimensionToPort+m.DimensionToStarboard)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (db *DB) UpdatePositionFromPositionReportClassA(m *nmeaais.PositionReportClassA) error {
+	sql := fmt.Sprintf(`
+	insert into position 
+	(mmsi, latitude, longitude, the_geog, created_at)
+	values 
+	($1, $2, $3, ST_GeographyFromText('SRID=4326;POINT(%[1]f %[2]f)'), now())
+	`, m.Longitude, m.Latitude)
+
+	_, err := db.Exec(sql, m.MMSI, m.Latitude, m.Longitude)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (db *DB) UpdatePositionFromPositionReportClassBStandard(m *nmeaais.PositionReportClassBStandard) error {
+	sql := fmt.Sprintf(`
+	insert into position 
+	(mmsi, latitude, longitude, the_geog, created_at)
+	values 
+	($1, $2, $3, ST_GeographyFromText('SRID=4326;POINT(%[1]f %[2]f)'), now())
+	`, m.Longitude, m.Latitude)
+
+	_, err := db.Exec(sql, m.MMSI, m.Latitude, m.Longitude)
 	if err != nil {
 		return err
 	}

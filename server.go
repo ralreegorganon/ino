@@ -3,6 +3,7 @@ package ino
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
@@ -12,7 +13,9 @@ func CreateRouter(server *HTTPServer) (*mux.Router, error) {
 	r := mux.NewRouter()
 	m := map[string]map[string]HttpApiFunc{
 		"GET": {
-			"/api/vessel": server.GetVessels,
+			"/api/vessels":                         server.GetVessels,
+			"/api/vessels/{mmsi:[0-9]+}":           server.GetVesselByMmsi,
+			"/api/vessels/{mmsi:[0-9]+}/positions": server.GetPositionsForVessel,
 		},
 		"PUT": {},
 		"OPTIONS": {
@@ -97,6 +100,39 @@ func (s *HTTPServer) GetVessels(w http.ResponseWriter, r *http.Request, vars map
 	}
 
 	writeJSON(w, http.StatusOK, vessels)
+
+	return nil
+}
+
+func (s *HTTPServer) GetVesselByMmsi(w http.ResponseWriter, r *http.Request, vars map[string]string) error {
+	mmsi, err := strconv.Atoi(vars["mmsi"])
+	if err != nil {
+		return err
+	}
+	vessel, err := s.DB.GetVessel(mmsi)
+
+	if err != nil {
+		return err
+	}
+
+	writeJSON(w, http.StatusOK, vessel)
+
+	return nil
+}
+
+func (s *HTTPServer) GetPositionsForVessel(w http.ResponseWriter, r *http.Request, vars map[string]string) error {
+	mmsi, err := strconv.Atoi(vars["mmsi"])
+	if err != nil {
+		return err
+	}
+
+	positions, err := s.DB.GetPositionsForVessel(mmsi)
+
+	if err != nil {
+		return err
+	}
+
+	writeJSON(w, http.StatusOK, positions)
 
 	return nil
 }

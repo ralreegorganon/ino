@@ -89,6 +89,7 @@ func (m *Monstah) postprocess() {
 			continue
 		}
 
-		m.DB.UpdateVessel(o)
+		go m.DB.UpdateVessel(o)
+		go m.DB.UpdatePosition(o)
 	}
 }
