@@ -67,6 +67,15 @@ func (db *DB) GetVessels() ([]*Vessel, error) {
 	return vessels, nil
 }
 
+func (db *DB) GetVesselsGeojson() ([]byte, error) {
+	var geojson []byte
+	err := db.QueryRow("select geojson from vessel_geojson").Scan(&geojson)
+	if err != nil {
+		return nil, err
+	}
+	return geojson, nil
+}
+
 func (db *DB) GetVessel(mmsi int) (*Vessel, error) {
 	vessel := &Vessel{}
 	err := db.Get(vessel, `

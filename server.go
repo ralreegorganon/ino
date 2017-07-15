@@ -78,6 +78,12 @@ func writeJSON(w http.ResponseWriter, code int, thing interface{}) error {
 	return err
 }
 
+func writeGeoJSON(w http.ResponseWriter, code int, thing []byte) {
+	w.Header().Set("Content-Type", "application/vnd.geo+json")
+	w.WriteHeader(code)
+	w.Write(thing)
+}
+
 func httpError(w http.ResponseWriter, err error) {
 	statusCode := http.StatusInternalServerError
 
@@ -93,13 +99,26 @@ func options(w http.ResponseWriter, r *http.Request, vars map[string]string) err
 }
 
 func (s *HTTPServer) GetVessels(w http.ResponseWriter, r *http.Request, vars map[string]string) error {
-	vessels, err := s.DB.GetVessels()
+	query := r.URL.Query()
+	format := query.Get("f")
 
-	if err != nil {
-		return err
+	if format == "geojson" {
+		geojson, err := s.DB.GetVesselsGeojson()
+
+		if err != nil {
+			return err
+		}
+
+		writeGeoJSON(w, http.StatusOK, geojson)
+	} else {
+		vessels, err := s.DB.GetVessels()
+
+		if err != nil {
+			return err
+		}
+
+		writeJSON(w, http.StatusOK, vessels)
 	}
-
-	writeJSON(w, http.StatusOK, vessels)
 
 	return nil
 }
