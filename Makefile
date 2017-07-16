@@ -1,4 +1,14 @@
-ARCH ?= darwin
+ifeq ($(OS),Windows_NT)
+    ARCH = windows
+else
+    UNAME_S := $(shell uname -s)
+    ifeq ($(UNAME_S),Linux)
+			ARCH = linux
+    endif
+    ifeq ($(UNAME_S),Darwin)
+			ARCH = darwin
+    endif
+endif
 REPO_VERSION := $$(git describe --abbrev=0 --tags)
 BUILD_DATE := $$(date +%Y-%m-%d-%H:%M)
 GIT_HASH := $$(git rev-parse --short HEAD)
