@@ -81,13 +81,19 @@ func (m *Monstah) receive(address string) {
 func (m *Monstah) postprocess() {
 	for o := range m.d.Output {
 		if o.Error != nil {
-			log.WithField("err", o.Error).Error("Couldn't decode message")
+			log.WithFields(log.Fields{
+				"message": o.SourceMessage,
+				"err":     o.Error,
+			}).Error("Couldn't decode message")
 			continue
 		}
 
 		message, err := json.Marshal(o.DecodedMessage)
 		if err != nil {
-			log.WithField("err", o.Error).Error("Couldn't marshal message")
+			log.WithFields(log.Fields{
+				"message": o.DecodedMessage,
+				"err":     err,
+			}).Error("Couldn't marshal message")
 			continue
 		}
 
