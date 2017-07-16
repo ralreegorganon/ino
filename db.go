@@ -1,7 +1,6 @@
 package ino
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/jmoiron/sqlx"
@@ -30,9 +29,8 @@ func (db *DB) AddPacket(raw string) error {
 	return nil
 }
 
-func (db *DB) AddMessage(r *nmeaais.DecoderResult) error {
-	m, _ := json.Marshal(r.DecodedMessage)
-	_, err := db.Exec("insert into message (mmsi, type, message) values ($1, $2, $3)", r.SourceMessage.MMSI, r.SourceMessage.MessageType, m)
+func (db *DB) AddMessage(mmsi int64, messageType int64, message []byte) error {
+	_, err := db.Exec("insert into message (mmsi, type, message) values ($1, $2, $3)", mmsi, messageType, message)
 	if err != nil {
 		return err
 	}

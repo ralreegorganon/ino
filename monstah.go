@@ -2,6 +2,7 @@ package ino
 
 import (
 	"bufio"
+	"encoding/json"
 	"net"
 	"time"
 
@@ -83,9 +84,19 @@ func (m *Monstah) postprocess() {
 			log.WithField("err", o.Error).Error("Couldn't decode message")
 			continue
 		}
-		err := m.DB.AddMessage(o)
+
+		message, err := json.Marshal(o.DecodedMessage)
 		if err != nil {
-			log.WithField("err", err).Error("Couldn't insert message to database")
+			log.WithField("err", o.Error).Error("Couldn't marshal message")
+			continue
+		}
+
+		err = m.DB.AddMessage(o.SourceMessage.MMSI, o.SourceMessage.MessageType, message)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"message": message,
+				"err":     err,
+			}).Error("Couldn't insert message to database")
 			continue
 		}
 
