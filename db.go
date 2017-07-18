@@ -29,8 +29,8 @@ func (db *DB) AddPacket(raw string) error {
 	return nil
 }
 
-func (db *DB) AddMessage(mmsi int64, messageType int64, message []byte) error {
-	_, err := db.Exec("insert into message (mmsi, type, message) values ($1, $2, $3)", mmsi, messageType, message)
+func (db *DB) AddMessage(mmsi int64, messageType int64, message []byte, raw []byte) error {
+	_, err := db.Exec("insert into message (mmsi, type, message, raw) values ($1, $2, $3, $4)", mmsi, messageType, message, raw)
 	if err != nil {
 		return err
 	}

@@ -1,0 +1,1 @@
+alter table message add raw character varying not null default '';

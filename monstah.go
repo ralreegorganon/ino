@@ -6,6 +6,8 @@ import (
 	"net"
 	"time"
 
+	"bytes"
+
 	"github.com/ralreegorganon/nmeaais"
 	log "github.com/sirupsen/logrus"
 )
@@ -94,10 +96,21 @@ func (m *Monstah) postprocess() {
 				"message": o.DecodedMessage,
 				"err":     err,
 			}).Error("Couldn't marshal message")
-			continue
+			message = []byte("{}")
 		}
 
-		err = m.DB.AddMessage(o.SourceMessage.MMSI, o.SourceMessage.MessageType, message)
+		var rawBuf bytes.Buffer
+		length := len(o.SourcePackets)
+		for i, p := range o.SourcePackets {
+			rawBuf.WriteString(p.Raw)
+			if i+1 != length {
+				rawBuf.WriteString("\n")
+			}
+		}
+
+		raw := rawBuf.Bytes()
+
+		err = m.DB.AddMessage(o.SourceMessage.MMSI, o.SourceMessage.MessageType, message, raw)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"message": message,
