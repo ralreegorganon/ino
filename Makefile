@@ -16,6 +16,9 @@ GOBUILD_VERSION_ARGS := -ldflags "-s -X main.Version=$(REPO_VERSION) -X main.Git
 BINARY := ino
 MAIN_PKG := github.com/ralreegorganon/ino/cmd/ino
 
+REGISTRY := registry.ralreegorganon.com
+IMAGE_NAME := $(BINARY)
+
 DB_USER := ino
 DB_PASSWORD := ino
 DB_PORT_MIGRATION := 9432
@@ -41,6 +44,7 @@ migrate:
 
 docker:
 	GOOS=linux GOARCH=amd64 go build -o build/bin/linux/$(BINARY) $(GOBUILD_VERSION_ARGS) $(MAIN_PKG)
+	docker build --pull -t $(REGISTRY)/$(IMAGE_NAME):latest build
 
 run-docker: docker
 	cd build/ && DB_USER=$(DB_USER) DB_PASSWORD=$(DB_PASSWORD) DB_PORT_MIGRATION=$(DB_PORT_MIGRATION) INO_CONNECTION_STRING="$(INO_CONNECTION_STRING_DOCKER)" docker-compose -p ino rm -f ino
@@ -58,5 +62,10 @@ docker-logs:
 
 clean:
 	rm -rf build/bin/*
+
+release: docker
+	docker push $(REGISTRY)/$(IMAGE_NAME):latest
+	docker tag $(REGISTRY)/$(IMAGE_NAME):latest $(REGISTRY)/$(IMAGE_NAME):$(REPO_VERSION)
+	docker push $(REGISTRY)/$(IMAGE_NAME):$(REPO_VERSION)
 
 .PHONY: build install
