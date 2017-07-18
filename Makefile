@@ -27,6 +27,8 @@ INO_CONNECTION_STRING_LOCAL := postgres://$(DB_USER):$(DB_PASSWORD)@localhost:54
 INO_CONNECTION_STRING_DOCKER := postgres://$(DB_USER):$(DB_PASSWORD)@db:5432/$(DB_USER)?sslmode=disable
 INO_CONNECTION_STRING_MIGRATION_DOCKER := postgres://$(DB_USER):$(DB_PASSWORD)@localhost:$(DB_PORT_MIGRATION)/$(DB_USER)?sslmode=disable
 
+INO_MIGRATIONS_PATH := file://migrations
+
 dep:
 	dep ensure
 
@@ -34,7 +36,7 @@ build:
 	go build -i -v -o build/bin/$(ARCH)/$(BINARY) $(GOBUILD_VERSION_ARGS) $(MAIN_PKG)
 
 run: build
-	INO_CONNECTION_STRING="$(INO_CONNECTION_STRING_LOCAL)" ./build/bin/$(ARCH)/$(BINARY)
+	INO_CONNECTION_STRING="$(INO_CONNECTION_STRING_LOCAL)" INO_MIGRATIONS_PATH="$(INO_MIGRATIONS_PATH)" ./build/bin/$(ARCH)/$(BINARY)
 
 install:
 	go install $(GOBUILD_VERSION_ARGS) $(MAIN_PKG)
@@ -43,6 +45,7 @@ migrate:
 	cd migrations/ && INO_CONNECTION_STRING="$(INO_CONNECTION_STRING_LOCAL)" ./run-migrations
 
 docker:
+	cp -r migrations build/migrations
 	GOOS=linux GOARCH=amd64 go build -o build/bin/linux/$(BINARY) $(GOBUILD_VERSION_ARGS) $(MAIN_PKG)
 	docker build --pull -t $(REGISTRY)/$(IMAGE_NAME):latest build
 

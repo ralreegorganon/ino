@@ -11,6 +11,10 @@ import (
 	"github.com/ralreegorganon/ino"
 	"github.com/ralreegorganon/rudia"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/mattes/migrate"
+	_ "github.com/mattes/migrate/database/postgres"
+	_ "github.com/mattes/migrate/source/file"
 )
 
 var version = flag.Bool("version", false, "Print version")
@@ -37,6 +41,21 @@ func main() {
 	var db ino.DB
 	if err := db.Open(connectionString); err != nil {
 		log.Fatal(err)
+	}
+
+	migrationsPath := os.Getenv("INO_MIGRATIONS_PATH")
+	g, err := migrate.New(migrationsPath, connectionString)
+	if err != nil {
+		time.Sleep(30 * time.Second)
+		log.Fatal("Couldn't create migrator: ", err)
+	}
+
+	if err = g.Up(); err != nil {
+		if err != migrate.ErrNoChange {
+			log.Fatal(err)
+		} else {
+			log.Info("Migrations up to date")
+		}
 	}
 
 	ro := &rudia.RepeaterOptions{
