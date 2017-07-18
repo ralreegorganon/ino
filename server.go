@@ -145,13 +145,26 @@ func (s *HTTPServer) GetPositionsForVessel(w http.ResponseWriter, r *http.Reques
 		return err
 	}
 
-	positions, err := s.DB.GetPositionsForVessel(mmsi)
+	query := r.URL.Query()
+	format := query.Get("f")
 
-	if err != nil {
-		return err
+	if format == "geojson" {
+		geojson, err := s.DB.GetPositionsForVesselGeojson(mmsi)
+
+		if err != nil {
+			return err
+		}
+
+		writeGeoJSON(w, http.StatusOK, geojson)
+	} else {
+		positions, err := s.DB.GetPositionsForVessel(mmsi)
+
+		if err != nil {
+			return err
+		}
+
+		writeJSON(w, http.StatusOK, positions)
 	}
-
-	writeJSON(w, http.StatusOK, positions)
 
 	return nil
 }

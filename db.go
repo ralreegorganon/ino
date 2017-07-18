@@ -124,6 +124,15 @@ func (db *DB) GetPositionsForVessel(mmsi int) ([]*Position, error) {
 	return positions, nil
 }
 
+func (db *DB) GetPositionsForVesselGeojson(mmsi int) ([]byte, error) {
+	var geojson []byte
+	err := db.QueryRow("select geojson from position_geojson where mmsi = $1", mmsi).Scan(&geojson)
+	if err != nil {
+		return nil, err
+	}
+	return geojson, nil
+}
+
 func (db *DB) UpdateVesselFromPositionReportClassA(m *nmeaais.PositionReportClassA) error {
 	sql := fmt.Sprintf(`
 	insert into vessel 
