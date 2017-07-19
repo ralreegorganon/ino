@@ -45,7 +45,7 @@ migrate:
 	cd migrations/ && INO_CONNECTION_STRING="$(INO_CONNECTION_STRING_LOCAL)" ./run-migrations
 
 docker:
-	cp -r migrations build/migrations
+	mkdir -p build/migrations && cp migrations/*.sql build/migrations
 	GOOS=linux GOARCH=amd64 go build -o build/bin/linux/$(BINARY) $(GOBUILD_VERSION_ARGS) $(MAIN_PKG)
 	docker build --pull -t $(REGISTRY)/$(IMAGE_NAME):latest build
 

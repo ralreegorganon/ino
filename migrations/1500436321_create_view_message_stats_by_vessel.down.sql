@@ -1,0 +1,1 @@
+drop view message_stats_by_vessel;

@@ -13,9 +13,13 @@ func CreateRouter(server *HTTPServer) (*mux.Router, error) {
 	r := mux.NewRouter()
 	m := map[string]map[string]HttpApiFunc{
 		"GET": {
-			"/api/vessels":                         server.GetVessels,
-			"/api/vessels/{mmsi:[0-9]+}":           server.GetVesselByMmsi,
-			"/api/vessels/{mmsi:[0-9]+}/positions": server.GetPositionsForVessel,
+			"/api/vessels":                             server.GetVessels,
+			"/api/vessels/{mmsi:[0-9]+}":               server.GetVesselByMmsi,
+			"/api/vessels/{mmsi:[0-9]+}/positions":     server.GetPositionsForVessel,
+			"/api/stats/message":                       server.GetMessageStats,
+			"/api/stats/message/vessels":               server.GetMessageStatsByVessel,
+			"/api/stats/message/{type:[0-9]+}/vessels": server.GetMessageStatsByVesselForType,
+			"/api/stats/message/vessels/{mmsi:[0-9]+}": server.GetMessageStatsByVesselForVessel,
 		},
 		"PUT": {},
 		"OPTIONS": {
@@ -80,6 +84,12 @@ func writeJSON(w http.ResponseWriter, code int, thing interface{}) error {
 
 func writeGeoJSON(w http.ResponseWriter, code int, thing []byte) {
 	w.Header().Set("Content-Type", "application/vnd.geo+json")
+	w.WriteHeader(code)
+	w.Write(thing)
+}
+
+func writeJSONDirect(w http.ResponseWriter, code int, thing []byte) {
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	w.Write(thing)
 }
@@ -166,5 +176,51 @@ func (s *HTTPServer) GetPositionsForVessel(w http.ResponseWriter, r *http.Reques
 		writeJSON(w, http.StatusOK, positions)
 	}
 
+	return nil
+}
+
+func (s *HTTPServer) GetMessageStats(w http.ResponseWriter, r *http.Request, vars map[string]string) error {
+	json, err := s.DB.GetMessageStatsJson()
+	if err != nil {
+		return err
+	}
+	writeJSONDirect(w, http.StatusOK, json)
+	return nil
+}
+
+func (s *HTTPServer) GetMessageStatsByVessel(w http.ResponseWriter, r *http.Request, vars map[string]string) error {
+	json, err := s.DB.GetMessageStatsByVesselJson()
+	if err != nil {
+		return err
+	}
+	writeJSONDirect(w, http.StatusOK, json)
+	return nil
+}
+
+func (s *HTTPServer) GetMessageStatsByVesselForType(w http.ResponseWriter, r *http.Request, vars map[string]string) error {
+	messageType, err := strconv.Atoi(vars["type"])
+	if err != nil {
+		return err
+	}
+
+	json, err := s.DB.GetMessageStatsByVesselForTypeJson(messageType)
+	if err != nil {
+		return err
+	}
+	writeJSONDirect(w, http.StatusOK, json)
+	return nil
+}
+
+func (s *HTTPServer) GetMessageStatsByVesselForVessel(w http.ResponseWriter, r *http.Request, vars map[string]string) error {
+	mmsi, err := strconv.Atoi(vars["mmsi"])
+	if err != nil {
+		return err
+	}
+
+	json, err := s.DB.GetMessageStatsByVesselForVesselJson(mmsi)
+	if err != nil {
+		return err
+	}
+	writeJSONDirect(w, http.StatusOK, json)
 	return nil
 }

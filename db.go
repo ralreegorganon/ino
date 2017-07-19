@@ -275,3 +275,39 @@ func (db *DB) UpdatePositionFromPositionReportClassBStandard(m *nmeaais.Position
 	}
 	return nil
 }
+
+func (db *DB) GetMessageStatsJson() ([]byte, error) {
+	var json []byte
+	err := db.QueryRow("select json_agg(message_stats) json from message_stats").Scan(&json)
+	if err != nil {
+		return nil, err
+	}
+	return json, nil
+}
+
+func (db *DB) GetMessageStatsByVesselForTypeJson(messageType int) ([]byte, error) {
+	var json []byte
+	err := db.QueryRow("select json_agg(message_stats_by_vessel) json from message_stats_by_vessel where type = $1", messageType).Scan(&json)
+	if err != nil {
+		return nil, err
+	}
+	return json, nil
+}
+
+func (db *DB) GetMessageStatsByVesselJson() ([]byte, error) {
+	var json []byte
+	err := db.QueryRow("select json_agg(message_stats_by_vessel) json from message_stats_by_vessel").Scan(&json)
+	if err != nil {
+		return nil, err
+	}
+	return json, nil
+}
+
+func (db *DB) GetMessageStatsByVesselForVesselJson(mmsi int) ([]byte, error) {
+	var json []byte
+	err := db.QueryRow("select json_agg(message_stats_by_vessel) json from message_stats_by_vessel where mmsi = $1", mmsi).Scan(&json)
+	if err != nil {
+		return nil, err
+	}
+	return json, nil
+}
