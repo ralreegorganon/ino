@@ -18,11 +18,17 @@ type Position struct {
 func (db *DB) UpdatePosition(r nmeaais.DecoderOutput) {
 	switch dm := r.DecodedMessage.(type) {
 	case *nmeaais.PositionReportClassA:
+		if dm.Latitude == 91 || dm.Longitude == 181 {
+			break
+		}
 		err := db.UpdatePositionFromPositionReportClassA(dm)
 		if err != nil {
 			log.WithField("err", err).Error("Couldn't update position from PositionReportClassA")
 		}
 	case *nmeaais.PositionReportClassBStandard:
+		if dm.Latitude == 91 || dm.Longitude == 181 {
+			break
+		}
 		err := db.UpdatePositionFromPositionReportClassBStandard(dm)
 		if err != nil {
 			log.WithField("err", err).Error("Couldn't update position from PositionReportClassBStandard")
