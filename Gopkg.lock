@@ -41,7 +41,7 @@
   branch = "master"
   name = "github.com/ralreegorganon/nmeaais"
   packages = ["."]
-  revision = "0cdb1a61d7d0e3044871d6c03ad55c86e5226967"
+  revision = "58fc7d03e092abf10a7cc1c707b5ab8afc1007e2"
 
 [[projects]]
   branch = "master"
@@ -59,7 +59,7 @@
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "4cd6d1a821c7175768725b55ca82f14683a29ea4"
+  revision = "35ef4487ce0a1ea5d4b616ffe71e34febe723695"
 
 [solve-meta]
   analyzer-name = "dep"

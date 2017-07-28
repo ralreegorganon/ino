@@ -26,7 +26,7 @@ type Vessel struct {
 	UpdatedAt        time.Time   `json:"updatedAt" db:"updated_at"`
 }
 
-func (db *DB) UpdateVessel(r *nmeaais.DecoderResult) {
+func (db *DB) UpdateVessel(r nmeaais.DecoderOutput) {
 	switch dm := r.DecodedMessage.(type) {
 	case *nmeaais.PositionReportClassA:
 		err := db.UpdateVesselFromPositionReportClassA(dm)

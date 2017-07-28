@@ -73,7 +73,10 @@ func (m *Monstah) receive(address string) {
 				log.WithField("err", err).Error("Couldn't insert packet to database")
 				continue
 			}
-			m.d.Input <- line
+			m.d.Input <- nmeaais.DecoderInput{
+				Input:     line,
+				Timestamp: time.Now(),
+			}
 		}
 		_ = <-fault
 		conn.Close()

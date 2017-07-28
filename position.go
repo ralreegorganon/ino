@@ -15,7 +15,7 @@ type Position struct {
 	CreatedAt time.Time  `json:"createdAt" db:"created_at"`
 }
 
-func (db *DB) UpdatePosition(r *nmeaais.DecoderResult) {
+func (db *DB) UpdatePosition(r nmeaais.DecoderOutput) {
 	switch dm := r.DecodedMessage.(type) {
 	case *nmeaais.PositionReportClassA:
 		err := db.UpdatePositionFromPositionReportClassA(dm)
