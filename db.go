@@ -1,6 +1,7 @@
 package ino
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/jmoiron/sqlx"
@@ -21,16 +22,16 @@ func (db *DB) Open(connectionString string) error {
 	return nil
 }
 
-func (db *DB) AddPacket(raw string) error {
-	_, err := db.Exec("insert into packet (raw) values ($1)", raw)
+func (db *DB) AddPacket(raw string, feedID int) error {
+	_, err := db.Exec("insert into packet (raw, feed_id) values ($1, $2)", raw, feedID)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (db *DB) AddMessage(mmsi int64, messageType int64, message []byte, raw []byte) error {
-	_, err := db.Exec("insert into message (mmsi, type, message, raw) values ($1, $2, $3, $4)", mmsi, messageType, message, raw)
+func (db *DB) AddMessage(mmsi int64, messageType int64, message []byte, raw []byte, feedID int) error {
+	_, err := db.Exec("insert into message (mmsi, type, message, raw, feed_id) values ($1, $2, $3, $4, $5)", mmsi, messageType, message, raw, feedID)
 	if err != nil {
 		return err
 	}
@@ -310,4 +311,45 @@ func (db *DB) GetMessageStatsByVesselForVesselJson(mmsi int) ([]byte, error) {
 		return nil, err
 	}
 	return json, nil
+}
+
+func (db *DB) GetFeedId(address string) (int, error) {
+	var feedIDs []int
+	err := db.Select(&feedIDs, "select feed_id from feed where remote_address = $1", address)
+	if err != nil {
+		return 0, err
+	}
+
+	c := len(feedIDs)
+
+	switch c {
+	case 1:
+		return feedIDs[0], nil
+	case 0:
+		var feedID int
+		err = db.QueryRow("insert into feed (remote_address) values ($1) returning feed_id", address).Scan(&feedID)
+		if err != nil {
+			return 0, err
+		}
+		return feedID, nil
+	default:
+		return 0, errors.New("ino: feed couldn't be found or created")
+	}
+}
+
+func (db *DB) GetFeeds() ([]*Feed, error) {
+	feeds := []*Feed{}
+	err := db.Select(&feeds, `
+		select 
+			feed_id, 
+			remote_address,
+			active,
+			created_at 
+		from 
+			feed
+	`)
+	if err != nil {
+		return nil, err
+	}
+	return feeds, nil
 }

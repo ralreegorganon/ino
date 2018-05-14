@@ -9,16 +9,24 @@ import (
 	"bytes"
 
 	"github.com/ralreegorganon/nmeaais"
+	"github.com/ralreegorganon/rudia"
 	log "github.com/sirupsen/logrus"
 )
 
 type Monstah struct {
-	d  *nmeaais.Decoder
-	DB *DB
+	feedID int
+	r      *rudia.Repeater
+	d      *nmeaais.Decoder
+	DB     *DB
 }
 
 func NewMonstah(db *DB) *Monstah {
 	m := &Monstah{
+		r: rudia.NewRepeater(&rudia.RepeaterOptions{
+			UpstreamProxyIdleTimeout:    time.Duration(600) * time.Second,
+			UpstreamListenerIdleTimeout: time.Duration(600) * time.Second,
+			RetryInterval:               time.Duration(10) * time.Second,
+		}),
 		d:  nmeaais.NewDecoder(),
 		DB: db,
 	}
@@ -26,13 +34,51 @@ func NewMonstah(db *DB) *Monstah {
 }
 
 func (m *Monstah) Decode(address string) {
-	go m.receive(address)
+	log.WithFields(log.Fields{
+		"source": address,
+	}).Info("Decoding from source")
+
+	feedID, err := m.DB.GetFeedId(address)
+
+	if err != nil {
+		log.WithFields(log.Fields{
+			"upstream": address,
+			"err":      err,
+		}).Error("Error fetching feed id for upstream")
+		return
+	}
+
+	m.feedID = feedID
+
+	m.r.Proxy(address)
+
+	// This is really dumb but I don't want to rework things
+	// so that rudia accept a listener, so in order to get a
+	// random port I'm just letting the OS pick one, capturing
+	// it, closing it, and reusing it. Totally fine! :/
+	listener, err := net.Listen("tcp", ":0")
+	if err != nil {
+		log.WithFields(log.Fields{
+			"err": err,
+		}).Error("Error creating decoding loopback")
+	}
+	port := listener.Addr().String()
+	err = listener.Close()
+	if err != nil {
+		log.WithFields(log.Fields{
+			"err": err,
+		}).Error("Error swapping decoding loopback")
+	}
+
+	go m.r.ListenAndAcceptClients(port)
+	go m.receive(port)
 	go m.postprocess()
 }
 
 func (m *Monstah) Shutdown() {
 	log.Info("Shutting down decoder")
 	close(m.d.Input)
+	m.r.Shutdown()
 }
 
 func (m *Monstah) receive(address string) {
@@ -68,7 +114,7 @@ func (m *Monstah) receive(address string) {
 				fault <- true
 				break
 			}
-			err = m.DB.AddPacket(line)
+			err = m.DB.AddPacket(line, m.feedID)
 			if err != nil {
 				log.WithField("err", err).Error("Couldn't insert packet to database")
 				continue
@@ -113,7 +159,7 @@ func (m *Monstah) postprocess() {
 
 		raw := rawBuf.Bytes()
 
-		err = m.DB.AddMessage(o.SourceMessage.MMSI, o.SourceMessage.MessageType, message, raw)
+		err = m.DB.AddMessage(o.SourceMessage.MMSI, o.SourceMessage.MessageType, message, raw, m.feedID)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"message": message,

@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/ralreegorganon/ino"
-	"github.com/ralreegorganon/rudia"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/mattes/migrate"
@@ -58,18 +57,7 @@ func main() {
 		}
 	}
 
-	ro := &rudia.RepeaterOptions{
-		UpstreamProxyIdleTimeout:    time.Duration(600) * time.Second,
-		UpstreamListenerIdleTimeout: time.Duration(600) * time.Second,
-		RetryInterval:               time.Duration(10) * time.Second,
-	}
-	r := rudia.NewRepeater(ro)
-	m := ino.NewMonstah(&db)
-	r.Proxy("ais1.shipraiser.net:6494")
-
-	port := ":33000"
-	go r.ListenAndAcceptClients(port)
-	go m.Decode(port)
+	mm := ino.NewMonstahManager(&db)
 
 	server := ino.NewHTTPServer(&db)
 	router, err := ino.CreateRouter(server)
@@ -83,6 +71,5 @@ func main() {
 	log.WithField("address", u).Info("ino web server started")
 
 	<-interrupt
-	m.Shutdown()
-	r.Shutdown()
+	mm.Shutdown()
 }
