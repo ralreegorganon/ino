@@ -29,11 +29,8 @@ INO_CONNECTION_STRING_MIGRATION_DOCKER := postgres://$(DB_USER):$(DB_PASSWORD)@l
 
 INO_MIGRATIONS_PATH := file://migrations
 
-dep:
-	dep ensure
-
 build:
-	go build -i -v -o build/bin/$(ARCH)/$(BINARY) $(GOBUILD_VERSION_ARGS) $(MAIN_PKG)
+	go build -v -o build/bin/$(ARCH)/$(BINARY) $(GOBUILD_VERSION_ARGS) $(MAIN_PKG)
 
 run: build
 	INO_CONNECTION_STRING="$(INO_CONNECTION_STRING_LOCAL)" INO_MIGRATIONS_PATH="$(INO_MIGRATIONS_PATH)" ./build/bin/$(ARCH)/$(BINARY)
@@ -46,22 +43,22 @@ migrate:
 
 docker:
 	mkdir -p build/migrations && cp migrations/*.sql build/migrations
-	GOOS=linux GOARCH=amd64 go build -o build/bin/linux/$(BINARY) $(GOBUILD_VERSION_ARGS) $(MAIN_PKG)
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o build/bin/linux/$(BINARY) $(GOBUILD_VERSION_ARGS) $(MAIN_PKG)
 	docker build --pull -t $(REGISTRY)/$(IMAGE_NAME):latest build
 
 run-docker: docker
-	cd build/ && DB_USER=$(DB_USER) DB_PASSWORD=$(DB_PASSWORD) DB_PORT_MIGRATION=$(DB_PORT_MIGRATION) INO_CONNECTION_STRING="$(INO_CONNECTION_STRING_DOCKER)" docker-compose -p ino rm -f ino
-	DB_USER=$(DB_USER) DB_PASSWORD=$(DB_PASSWORD) DB_PORT_MIGRATION=$(DB_PORT_MIGRATION) INO_CONNECTION_STRING="$(INO_CONNECTION_STRING_DOCKER)" docker-compose -f build/docker-compose.yml -p ino build
-	DB_USER=$(DB_USER) DB_PASSWORD=$(DB_PASSWORD) DB_PORT_MIGRATION=$(DB_PORT_MIGRATION) INO_CONNECTION_STRING="$(INO_CONNECTION_STRING_DOCKER)" docker-compose -f build/docker-compose.yml -p ino up -d
+	cd build/ && DB_USER=$(DB_USER) DB_PASSWORD=$(DB_PASSWORD) DB_PORT_MIGRATION=$(DB_PORT_MIGRATION) INO_CONNECTION_STRING="$(INO_CONNECTION_STRING_DOCKER)" docker compose -p ino rm -f ino
+	DB_USER=$(DB_USER) DB_PASSWORD=$(DB_PASSWORD) DB_PORT_MIGRATION=$(DB_PORT_MIGRATION) INO_CONNECTION_STRING="$(INO_CONNECTION_STRING_DOCKER)" docker compose -f build/docker-compose.yml -p ino build
+	DB_USER=$(DB_USER) DB_PASSWORD=$(DB_PASSWORD) DB_PORT_MIGRATION=$(DB_PORT_MIGRATION) INO_CONNECTION_STRING="$(INO_CONNECTION_STRING_DOCKER)" docker compose -f build/docker-compose.yml -p ino up -d
 
 stop-docker:
-	cd build/ && DB_USER=$(DB_USER) DB_PASSWORD=$(DB_PASSWORD) DB_PORT_MIGRATION=$(DB_PORT_MIGRATION) INO_CONNECTION_STRING="$(INO_CONNECTION_STRING_DOCKER)" docker-compose -p ino stop
+	cd build/ && DB_USER=$(DB_USER) DB_PASSWORD=$(DB_PASSWORD) DB_PORT_MIGRATION=$(DB_PORT_MIGRATION) INO_CONNECTION_STRING="$(INO_CONNECTION_STRING_DOCKER)" docker compose -p ino stop
 
 migrate-docker:
 	cd migrations/ && INO_CONNECTION_STRING="$(INO_CONNECTION_STRING_MIGRATION_DOCKER)" ./run-migrations
 
 docker-logs: 
-	cd build/ && DB_USER=$(DB_USER) DB_PASSWORD=$(DB_PASSWORD) DB_PORT_MIGRATION=$(DB_PORT_MIGRATION) INO_CONNECTION_STRING="$(INO_CONNECTION_STRING_DOCKER)" docker-compose -p ino logs
+	cd build/ && DB_USER=$(DB_USER) DB_PASSWORD=$(DB_PASSWORD) DB_PORT_MIGRATION=$(DB_PORT_MIGRATION) INO_CONNECTION_STRING="$(INO_CONNECTION_STRING_DOCKER)" docker compose -p ino logs
 
 clean:
 	rm -rf build/bin/*

@@ -1,11 +1,11 @@
 package ino
 
 import (
+	"log/slog"
 	"time"
 
-	"github.com/guregu/null"
+	"github.com/guregu/null/v5"
 	"github.com/ralreegorganon/nmeaais"
-	log "github.com/sirupsen/logrus"
 )
 
 type Position struct {
@@ -23,7 +23,7 @@ func (db *DB) UpdatePosition(r nmeaais.DecoderOutput) {
 		}
 		err := db.UpdatePositionFromPositionReportClassA(dm)
 		if err != nil {
-			log.WithField("err", err).Error("Couldn't update position from PositionReportClassA")
+			slog.Error("Couldn't update position from PositionReportClassA", slog.Any("error", err))
 		}
 	case *nmeaais.PositionReportClassBStandard:
 		if dm.Latitude == 91 || dm.Longitude == 181 {
@@ -31,7 +31,7 @@ func (db *DB) UpdatePosition(r nmeaais.DecoderOutput) {
 		}
 		err := db.UpdatePositionFromPositionReportClassBStandard(dm)
 		if err != nil {
-			log.WithField("err", err).Error("Couldn't update position from PositionReportClassBStandard")
+			slog.Error("Couldn't update vessel from PositionReportClassA", slog.Any("error", err))
 		}
 	default:
 	}

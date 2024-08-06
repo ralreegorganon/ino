@@ -1,11 +1,11 @@
 package ino
 
 import (
+	"log/slog"
 	"time"
 
-	"github.com/guregu/null"
+	"github.com/guregu/null/v5"
 	"github.com/ralreegorganon/nmeaais"
-	log "github.com/sirupsen/logrus"
 )
 
 type Vessel struct {
@@ -31,27 +31,27 @@ func (db *DB) UpdateVessel(r nmeaais.DecoderOutput) {
 	case *nmeaais.PositionReportClassA:
 		err := db.UpdateVesselFromPositionReportClassA(dm)
 		if err != nil {
-			log.WithField("err", err).Error("Couldn't update vessel from PositionReportClassA")
+			slog.Error("Couldn't update vessel from PositionReportClassA", slog.Any("error", err))
 		}
 	case *nmeaais.StaticAndVoyageRelatedData:
 		err := db.UpdateVesselFromStaticAndVoyageRelatedData(dm)
 		if err != nil {
-			log.WithField("err", err).Error("Couldn't update vessel from StaticAndVoyageRelatedData")
+			slog.Error("Couldn't update vessel from StaticAndVoyageRelatedData", slog.Any("error", err))
 		}
 	case *nmeaais.PositionReportClassBStandard:
 		err := db.UpdateVesselFromPositionReportClassBStandard(dm)
 		if err != nil {
-			log.WithField("err", err).Error("Couldn't update vessel from PositionReportClassBStandard")
+			slog.Error("Couldn't update vessel from PositionReportClassBStandard", slog.Any("error", err))
 		}
 	case *nmeaais.StaticDataReportA:
 		err := db.UpdateVesselFromStaticDataReportA(dm)
 		if err != nil {
-			log.WithField("err", err).Error("Couldn't update vessel from StaticDataReportA")
+			slog.Error("Couldn't update vessel from StaticDataReportA", slog.Any("error", err))
 		}
 	case *nmeaais.StaticDataReportB:
 		err := db.UpdateVesselFromStaticDataReportB(dm)
 		if err != nil {
-			log.WithField("err", err).Error("Couldn't update vessel from StaticDataReportB")
+			slog.Error("Couldn't update vessel from StaticDataReportB", slog.Any("error", err))
 		}
 	default:
 	}

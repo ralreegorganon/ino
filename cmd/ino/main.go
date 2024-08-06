@@ -3,26 +3,25 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
 	"time"
 
 	"github.com/ralreegorganon/ino"
-	log "github.com/sirupsen/logrus"
 
-	"github.com/mattes/migrate"
-	_ "github.com/mattes/migrate/database/postgres"
-	_ "github.com/mattes/migrate/source/file"
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
 var version = flag.Bool("version", false, "Print version")
 
 func init() {
-	f := &log.TextFormatter{
-		FullTimestamp: true,
-	}
-	log.SetFormatter(f)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
+
 }
 
 func main() {
@@ -39,36 +38,44 @@ func main() {
 	connectionString := os.Getenv("INO_CONNECTION_STRING")
 	var db ino.DB
 	if err := db.Open(connectionString); err != nil {
-		log.Fatal(err)
+		slog.Error("Couldn't connect to database", slog.Any("error", err))
+		os.Exit(1)
 	}
 
 	migrationsPath := os.Getenv("INO_MIGRATIONS_PATH")
 	g, err := migrate.New(migrationsPath, connectionString)
 	if err != nil {
 		time.Sleep(30 * time.Second)
-		log.Fatal("Couldn't create migrator: ", err)
+		slog.Error("Couldn't create migrator", slog.Any("error", err))
+		os.Exit(1)
 	}
 
 	if err = g.Up(); err != nil {
 		if err != migrate.ErrNoChange {
-			log.Fatal(err)
+			slog.Error("Couldn't migrate", slog.Any("error", err))
+			os.Exit(1)
 		} else {
-			log.Info("Migrations up to date")
+			slog.Info("Migrations up to date")
 		}
 	}
 
-	mm := ino.NewMonstahManager(&db)
+	mm, err := ino.NewMonstahManager(&db)
+	if err != nil {
+		slog.Error("Couldn't create feed manager", slog.Any("error", err))
+		os.Exit(1)
+	}
 
 	server := ino.NewHTTPServer(&db)
 	router, err := ino.CreateRouter(server)
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("Couldn't create router", slog.Any("error", err))
+		os.Exit(1)
 	}
 	http.Handle("/", router)
 
 	u := "0.0.0.0:8989"
 	go http.ListenAndServe(u, nil)
-	log.WithField("address", u).Info("ino web server started")
+	slog.Info("ino web server started", "address", u)
 
 	<-interrupt
 	mm.Shutdown()

@@ -2,16 +2,27 @@ package ino
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"strconv"
 
-	"github.com/gorilla/mux"
-	log "github.com/sirupsen/logrus"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/cors"
 )
 
-func CreateRouter(server *HTTPServer) (*mux.Router, error) {
-	r := mux.NewRouter()
-	m := map[string]map[string]HttpApiFunc{
+func CreateRouter(server *HTTPServer) (*chi.Mux, error) {
+	r := chi.NewRouter()
+
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"https://*", "http://*"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: false,
+		MaxAge:           300,
+	}))
+
+	m := map[string]map[string]HTTPApiFunc{
 		"GET": {
 			"/api/vessels":                             server.GetVessels,
 			"/api/vessels/{mmsi:[0-9]+}":               server.GetVesselByMmsi,
@@ -23,7 +34,7 @@ func CreateRouter(server *HTTPServer) (*mux.Router, error) {
 		},
 		"PUT": {},
 		"OPTIONS": {
-			"": options,
+			"/": options,
 		},
 	}
 
@@ -32,35 +43,22 @@ func CreateRouter(server *HTTPServer) (*mux.Router, error) {
 			localRoute := route
 			localHandler := handler
 			localMethod := method
-			f := makeHttpHandler(localMethod, localRoute, localHandler)
-
-			if localRoute == "" {
-				r.Methods(localMethod).HandlerFunc(f)
-			} else {
-				r.Path(localRoute).Methods(localMethod).HandlerFunc(f)
-			}
+			f := makeHTTPHandler(localMethod, localRoute, localHandler)
+			r.Method(localMethod, localRoute, f)
 		}
 	}
-
 	return r, nil
 }
 
-func makeHttpHandler(localMethod string, localRoute string, handlerFunc HttpApiFunc) http.HandlerFunc {
+func makeHTTPHandler(_ string, _ string, handlerFunc HTTPApiFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		writeCorsHeaders(w, r)
-		if err := handlerFunc(w, r, mux.Vars(r)); err != nil {
+		if err := handlerFunc(w, r); err != nil {
 			httpError(w, err)
 		}
 	}
 }
 
-func writeCorsHeaders(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("Access-Control-Allow-Origin", "*")
-	w.Header().Add("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept")
-	w.Header().Add("Access-Control-Allow-Methods", "GET, POST, DELETE, PUT, OPTIONS")
-}
-
-type HttpApiFunc func(w http.ResponseWriter, r *http.Request, vars map[string]string) error
+type HTTPApiFunc func(w http.ResponseWriter, r *http.Request) error
 
 type HTTPServer struct {
 	DB *DB
@@ -98,23 +96,22 @@ func httpError(w http.ResponseWriter, err error) {
 	statusCode := http.StatusInternalServerError
 
 	if err != nil {
-		log.WithField("err", err).Error("http error")
+		slog.Error("http error", slog.Any("error", err))
 		http.Error(w, err.Error(), statusCode)
 	}
 }
 
-func options(w http.ResponseWriter, r *http.Request, vars map[string]string) error {
+func options(w http.ResponseWriter, r *http.Request) error {
 	w.WriteHeader(http.StatusOK)
 	return nil
 }
 
-func (s *HTTPServer) GetVessels(w http.ResponseWriter, r *http.Request, vars map[string]string) error {
+func (s *HTTPServer) GetVessels(w http.ResponseWriter, r *http.Request) error {
 	query := r.URL.Query()
 	format := query.Get("f")
 
 	if format == "geojson" {
 		geojson, err := s.DB.GetVesselsGeojson()
-
 		if err != nil {
 			return err
 		}
@@ -122,7 +119,6 @@ func (s *HTTPServer) GetVessels(w http.ResponseWriter, r *http.Request, vars map
 		writeGeoJSON(w, http.StatusOK, geojson)
 	} else {
 		vessels, err := s.DB.GetVessels()
-
 		if err != nil {
 			return err
 		}
@@ -133,13 +129,12 @@ func (s *HTTPServer) GetVessels(w http.ResponseWriter, r *http.Request, vars map
 	return nil
 }
 
-func (s *HTTPServer) GetVesselByMmsi(w http.ResponseWriter, r *http.Request, vars map[string]string) error {
-	mmsi, err := strconv.Atoi(vars["mmsi"])
+func (s *HTTPServer) GetVesselByMmsi(w http.ResponseWriter, r *http.Request) error {
+	mmsi, err := strconv.Atoi(chi.URLParam(r, "mmsi"))
 	if err != nil {
 		return err
 	}
 	vessel, err := s.DB.GetVessel(mmsi)
-
 	if err != nil {
 		return err
 	}
@@ -149,8 +144,8 @@ func (s *HTTPServer) GetVesselByMmsi(w http.ResponseWriter, r *http.Request, var
 	return nil
 }
 
-func (s *HTTPServer) GetPositionsForVessel(w http.ResponseWriter, r *http.Request, vars map[string]string) error {
-	mmsi, err := strconv.Atoi(vars["mmsi"])
+func (s *HTTPServer) GetPositionsForVessel(w http.ResponseWriter, r *http.Request) error {
+	mmsi, err := strconv.Atoi(chi.URLParam(r, "mmsi"))
 	if err != nil {
 		return err
 	}
@@ -160,7 +155,6 @@ func (s *HTTPServer) GetPositionsForVessel(w http.ResponseWriter, r *http.Reques
 
 	if format == "geojson" {
 		geojson, err := s.DB.GetPositionsForVesselGeojson(mmsi)
-
 		if err != nil {
 			return err
 		}
@@ -168,7 +162,6 @@ func (s *HTTPServer) GetPositionsForVessel(w http.ResponseWriter, r *http.Reques
 		writeGeoJSON(w, http.StatusOK, geojson)
 	} else {
 		positions, err := s.DB.GetPositionsForVessel(mmsi)
-
 		if err != nil {
 			return err
 		}
@@ -179,8 +172,8 @@ func (s *HTTPServer) GetPositionsForVessel(w http.ResponseWriter, r *http.Reques
 	return nil
 }
 
-func (s *HTTPServer) GetMessageStats(w http.ResponseWriter, r *http.Request, vars map[string]string) error {
-	json, err := s.DB.GetMessageStatsJson()
+func (s *HTTPServer) GetMessageStats(w http.ResponseWriter, r *http.Request) error {
+	json, err := s.DB.GetMessageStatsJSON()
 	if err != nil {
 		return err
 	}
@@ -188,8 +181,8 @@ func (s *HTTPServer) GetMessageStats(w http.ResponseWriter, r *http.Request, var
 	return nil
 }
 
-func (s *HTTPServer) GetMessageStatsByVessel(w http.ResponseWriter, r *http.Request, vars map[string]string) error {
-	json, err := s.DB.GetMessageStatsByVesselJson()
+func (s *HTTPServer) GetMessageStatsByVessel(w http.ResponseWriter, r *http.Request) error {
+	json, err := s.DB.GetMessageStatsByVesselJSON()
 	if err != nil {
 		return err
 	}
@@ -197,13 +190,13 @@ func (s *HTTPServer) GetMessageStatsByVessel(w http.ResponseWriter, r *http.Requ
 	return nil
 }
 
-func (s *HTTPServer) GetMessageStatsByVesselForType(w http.ResponseWriter, r *http.Request, vars map[string]string) error {
-	messageType, err := strconv.Atoi(vars["type"])
+func (s *HTTPServer) GetMessageStatsByVesselForType(w http.ResponseWriter, r *http.Request) error {
+	messageType, err := strconv.Atoi(chi.URLParam(r, "type"))
 	if err != nil {
 		return err
 	}
 
-	json, err := s.DB.GetMessageStatsByVesselForTypeJson(messageType)
+	json, err := s.DB.GetMessageStatsByVesselForTypeJSON(messageType)
 	if err != nil {
 		return err
 	}
@@ -211,13 +204,13 @@ func (s *HTTPServer) GetMessageStatsByVesselForType(w http.ResponseWriter, r *ht
 	return nil
 }
 
-func (s *HTTPServer) GetMessageStatsByVesselForVessel(w http.ResponseWriter, r *http.Request, vars map[string]string) error {
-	mmsi, err := strconv.Atoi(vars["mmsi"])
+func (s *HTTPServer) GetMessageStatsByVesselForVessel(w http.ResponseWriter, r *http.Request) error {
+	mmsi, err := strconv.Atoi(chi.URLParam(r, "mmsi"))
 	if err != nil {
 		return err
 	}
 
-	json, err := s.DB.GetMessageStatsByVesselForVesselJson(mmsi)
+	json, err := s.DB.GetMessageStatsByVesselForVesselJSON(mmsi)
 	if err != nil {
 		return err
 	}

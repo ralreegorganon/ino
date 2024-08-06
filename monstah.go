@@ -2,15 +2,14 @@ package ino
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
+	"log/slog"
 	"net"
 	"time"
 
-	"bytes"
-
 	"github.com/ralreegorganon/nmeaais"
 	"github.com/ralreegorganon/rudia"
-	log "github.com/sirupsen/logrus"
 )
 
 type Monstah struct {
@@ -34,17 +33,12 @@ func NewMonstah(db *DB) *Monstah {
 }
 
 func (m *Monstah) Decode(address string) {
-	log.WithFields(log.Fields{
-		"source": address,
-	}).Info("Decoding from source")
+	slog.Info("Decoding from source", "source", address)
 
 	feedID, err := m.DB.GetFeedId(address)
 
 	if err != nil {
-		log.WithFields(log.Fields{
-			"upstream": address,
-			"err":      err,
-		}).Error("Error fetching feed id for upstream")
+		slog.Error("Error fetching feed id for upstream", "upstream", address, slog.Any("error", err))
 		return
 	}
 
@@ -58,16 +52,12 @@ func (m *Monstah) Decode(address string) {
 	// it, closing it, and reusing it. Totally fine! :/
 	listener, err := net.Listen("tcp", ":0")
 	if err != nil {
-		log.WithFields(log.Fields{
-			"err": err,
-		}).Error("Error creating decoding loopback")
+		slog.Error("Error creating decoding loopback", slog.Any("error", err))
 	}
 	port := listener.Addr().String()
 	err = listener.Close()
 	if err != nil {
-		log.WithFields(log.Fields{
-			"err": err,
-		}).Error("Error swapping decoding loopback")
+		slog.Error("Error swapping decoding loopback", slog.Any("error", err))
 	}
 
 	go m.r.ListenAndAcceptClients(port)
@@ -76,7 +66,7 @@ func (m *Monstah) Decode(address string) {
 }
 
 func (m *Monstah) Shutdown() {
-	log.Info("Shutting down decoder")
+	slog.Info("Shutting down decoder")
 	close(m.d.Input)
 	m.r.Shutdown()
 }
@@ -85,22 +75,12 @@ func (m *Monstah) receive(address string) {
 	retryInterval := 10 * time.Second
 	fault := make(chan bool)
 	for {
-		log.WithFields(log.Fields{
-			"upstream": address,
-		}).Info("Dialing upstream")
+		slog.Info("Dialing upstream", "upstream", address)
 
 		conn, err := net.Dial("tcp", address)
 		if err != nil {
-			log.WithFields(log.Fields{
-				"upstream": address,
-				"err":      err,
-			}).Error("Error dialing upstream")
-
-			log.WithFields(log.Fields{
-				"upstream": address,
-				"sleep":    retryInterval,
-			}).Info("Sleeping before retrying upstream")
-
+			slog.Error("Error dialing upstream", "upstream", address, slog.Any("error", err))
+			slog.Info("Sleeping before retrying upstream", "upstream", address, "sleep", retryInterval)
 			time.Sleep(retryInterval)
 			continue
 		}
@@ -110,13 +90,13 @@ func (m *Monstah) receive(address string) {
 		for {
 			line, err := r.ReadString('\n')
 			if err != nil {
-				log.WithField("err", err).Error("Couldn't read packet")
+				slog.Error("Couldn't read packet", slog.Any("error", err))
 				fault <- true
 				break
 			}
 			err = m.DB.AddPacket(line, m.feedID)
 			if err != nil {
-				log.WithField("err", err).Error("Couldn't insert packet to database")
+				slog.Error("Couldn't insert packet to database", slog.Any("error", err))
 				continue
 			}
 			m.d.Input <- nmeaais.DecoderInput{
@@ -124,7 +104,7 @@ func (m *Monstah) receive(address string) {
 				Timestamp: time.Now(),
 			}
 		}
-		_ = <-fault
+		<-fault
 		conn.Close()
 	}
 }
@@ -132,19 +112,13 @@ func (m *Monstah) receive(address string) {
 func (m *Monstah) postprocess() {
 	for o := range m.d.Output {
 		if o.Error != nil {
-			log.WithFields(log.Fields{
-				"message": o.SourceMessage,
-				"err":     o.Error,
-			}).Error("Couldn't decode message")
+			slog.Error("Couldn't decode message", "message", o.SourceMessage, slog.Any("error", o.Error))
 			continue
 		}
 
 		message, err := json.Marshal(o.DecodedMessage)
 		if err != nil {
-			log.WithFields(log.Fields{
-				"message": o.DecodedMessage,
-				"err":     err,
-			}).Error("Couldn't marshal message")
+			slog.Error("Couldn't marshal message", "message", o.DecodedMessage, slog.Any("error", err))
 			message = []byte("{}")
 		}
 
@@ -161,10 +135,7 @@ func (m *Monstah) postprocess() {
 
 		err = m.DB.AddMessage(o.SourceMessage.MMSI, o.SourceMessage.MessageType, message, raw, m.feedID)
 		if err != nil {
-			log.WithFields(log.Fields{
-				"message": message,
-				"err":     err,
-			}).Error("Couldn't insert message to database")
+			slog.Error("Couldn't insert message to database", "message", message, slog.Any("error", err))
 			continue
 		}
 

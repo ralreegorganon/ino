@@ -41,23 +41,23 @@ func (db *DB) AddMessage(mmsi int64, messageType int64, message []byte, raw []by
 func (db *DB) GetVessels() ([]*Vessel, error) {
 	vessels := []*Vessel{}
 	err := db.Select(&vessels, `
-		select 
-			mmsi, 
-			vessel_name, 
-			call_sign, 
-			ship_type, 
-			length, 
-			breadth, 
-			draught, 
-			latitude, 
-			longitude, 
-			speed_over_ground, 
-			true_heading, 
-			course_over_ground, 
-			navigation_status, 
-			destination, 
-			updated_at 
-		from 
+		select
+			mmsi,
+			vessel_name,
+			call_sign,
+			ship_type,
+			length,
+			breadth,
+			draught,
+			latitude,
+			longitude,
+			speed_over_ground,
+			true_heading,
+			course_over_ground,
+			navigation_status,
+			destination,
+			updated_at
+		from
 			vessel
 	`)
 	if err != nil {
@@ -78,23 +78,23 @@ func (db *DB) GetVesselsGeojson() ([]byte, error) {
 func (db *DB) GetVessel(mmsi int) (*Vessel, error) {
 	vessel := &Vessel{}
 	err := db.Get(vessel, `
-		select 
-			mmsi, 
-			vessel_name, 
-			call_sign, 
-			ship_type, 
-			length, 
-			breadth, 
-			draught, 
-			latitude, 
-			longitude, 
-			speed_over_ground, 
-			true_heading, 
-			course_over_ground, 
-			navigation_status, 
-			destination, 
-			updated_at 
-		from 
+		select
+			mmsi,
+			vessel_name,
+			call_sign,
+			ship_type,
+			length,
+			breadth,
+			draught,
+			latitude,
+			longitude,
+			speed_over_ground,
+			true_heading,
+			course_over_ground,
+			navigation_status,
+			destination,
+			updated_at
+		from
 			vessel
 		where
 			mmsi = $1
@@ -108,12 +108,12 @@ func (db *DB) GetVessel(mmsi int) (*Vessel, error) {
 func (db *DB) GetPositionsForVessel(mmsi int) ([]*Position, error) {
 	positions := []*Position{}
 	err := db.Select(&positions, `
-		select 
-			mmsi, 
-			latitude, 
-			longitude, 
-			created_at 
-		from 
+		select
+			mmsi,
+			latitude,
+			longitude,
+			created_at
+		from
 			position
 		where
 			mmsi = $1
@@ -136,9 +136,9 @@ func (db *DB) GetPositionsForVesselGeojson(mmsi int) ([]byte, error) {
 
 func (db *DB) UpdateVesselFromPositionReportClassA(m *nmeaais.PositionReportClassA) error {
 	sql := fmt.Sprintf(`
-	insert into vessel 
+	insert into vessel
 	(mmsi, latitude, longitude, speed_over_ground, true_heading, course_over_ground, navigation_status, the_geog, updated_at)
-	values 
+	values
 	($1, $2, $3, $4, $5, $6, $7, ST_GeographyFromText('SRID=4326;POINT(%[1]f %[2]f)'), now())
 	on conflict (mmsi)
 	do update set
@@ -161,9 +161,9 @@ func (db *DB) UpdateVesselFromPositionReportClassA(m *nmeaais.PositionReportClas
 
 func (db *DB) UpdateVesselFromStaticAndVoyageRelatedData(m *nmeaais.StaticAndVoyageRelatedData) error {
 	sql := `
-	insert into vessel 
+	insert into vessel
 	(mmsi, vessel_name, call_sign, ship_type, length, breadth, draught, destination, updated_at)
-	values 
+	values
 	($1, $2, $3, $4, $5, $6, $7, $8, now())
 	on conflict (mmsi)
 	do update set
@@ -185,9 +185,9 @@ func (db *DB) UpdateVesselFromStaticAndVoyageRelatedData(m *nmeaais.StaticAndVoy
 
 func (db *DB) UpdateVesselFromPositionReportClassBStandard(m *nmeaais.PositionReportClassBStandard) error {
 	sql := fmt.Sprintf(`
-	insert into vessel 
+	insert into vessel
 	(mmsi, latitude, longitude, speed_over_ground, true_heading, course_over_ground, the_geog, updated_at)
-	values 
+	values
 	($1, $2, $3, $4, $5, $6, ST_GeographyFromText('SRID=4326;POINT(%[1]f %[2]f)'), now())
 	on conflict (mmsi)
 	do update set
@@ -209,9 +209,9 @@ func (db *DB) UpdateVesselFromPositionReportClassBStandard(m *nmeaais.PositionRe
 
 func (db *DB) UpdateVesselFromStaticDataReportA(m *nmeaais.StaticDataReportA) error {
 	sql := `
-	insert into vessel 
+	insert into vessel
 	(mmsi, vessel_name, updated_at)
-	values 
+	values
 	($1, $2, now())
 	on conflict (mmsi)
 	do update set
@@ -227,9 +227,9 @@ func (db *DB) UpdateVesselFromStaticDataReportA(m *nmeaais.StaticDataReportA) er
 
 func (db *DB) UpdateVesselFromStaticDataReportB(m *nmeaais.StaticDataReportB) error {
 	sql := `
-	insert into vessel 
+	insert into vessel
 	(mmsi, call_sign, ship_type, length, breadth, updated_at)
-	values 
+	values
 	($1, $2, $3, $4, $5, now())
 	on conflict (mmsi)
 	do update set
@@ -249,9 +249,9 @@ func (db *DB) UpdateVesselFromStaticDataReportB(m *nmeaais.StaticDataReportB) er
 
 func (db *DB) UpdatePositionFromPositionReportClassA(m *nmeaais.PositionReportClassA) error {
 	sql := fmt.Sprintf(`
-	insert into position 
+	insert into position
 	(mmsi, latitude, longitude, the_geog, created_at)
-	values 
+	values
 	($1, $2, $3, ST_GeographyFromText('SRID=4326;POINT(%[1]f %[2]f)'), now())
 	`, m.Longitude, m.Latitude)
 
@@ -264,9 +264,9 @@ func (db *DB) UpdatePositionFromPositionReportClassA(m *nmeaais.PositionReportCl
 
 func (db *DB) UpdatePositionFromPositionReportClassBStandard(m *nmeaais.PositionReportClassBStandard) error {
 	sql := fmt.Sprintf(`
-	insert into position 
+	insert into position
 	(mmsi, latitude, longitude, the_geog, created_at)
-	values 
+	values
 	($1, $2, $3, ST_GeographyFromText('SRID=4326;POINT(%[1]f %[2]f)'), now())
 	`, m.Longitude, m.Latitude)
 
@@ -277,7 +277,7 @@ func (db *DB) UpdatePositionFromPositionReportClassBStandard(m *nmeaais.Position
 	return nil
 }
 
-func (db *DB) GetMessageStatsJson() ([]byte, error) {
+func (db *DB) GetMessageStatsJSON() ([]byte, error) {
 	var json []byte
 	err := db.QueryRow("select json_agg(message_stats) json from message_stats").Scan(&json)
 	if err != nil {
@@ -286,7 +286,7 @@ func (db *DB) GetMessageStatsJson() ([]byte, error) {
 	return json, nil
 }
 
-func (db *DB) GetMessageStatsByVesselForTypeJson(messageType int) ([]byte, error) {
+func (db *DB) GetMessageStatsByVesselForTypeJSON(messageType int) ([]byte, error) {
 	var json []byte
 	err := db.QueryRow("select json_agg(message_stats_by_vessel) json from message_stats_by_vessel where type = $1", messageType).Scan(&json)
 	if err != nil {
@@ -295,7 +295,7 @@ func (db *DB) GetMessageStatsByVesselForTypeJson(messageType int) ([]byte, error
 	return json, nil
 }
 
-func (db *DB) GetMessageStatsByVesselJson() ([]byte, error) {
+func (db *DB) GetMessageStatsByVesselJSON() ([]byte, error) {
 	var json []byte
 	err := db.QueryRow("select json_agg(message_stats_by_vessel) json from message_stats_by_vessel").Scan(&json)
 	if err != nil {
@@ -304,7 +304,7 @@ func (db *DB) GetMessageStatsByVesselJson() ([]byte, error) {
 	return json, nil
 }
 
-func (db *DB) GetMessageStatsByVesselForVesselJson(mmsi int) ([]byte, error) {
+func (db *DB) GetMessageStatsByVesselForVesselJSON(mmsi int) ([]byte, error) {
 	var json []byte
 	err := db.QueryRow("select json_agg(message_stats_by_vessel) json from message_stats_by_vessel where mmsi = $1", mmsi).Scan(&json)
 	if err != nil {
@@ -340,12 +340,12 @@ func (db *DB) GetFeedId(address string) (int, error) {
 func (db *DB) GetFeeds() ([]*Feed, error) {
 	feeds := []*Feed{}
 	err := db.Select(&feeds, `
-		select 
-			feed_id, 
+		select
+			feed_id,
 			remote_address,
 			active,
-			created_at 
-		from 
+			created_at
+		from
 			feed
 	`)
 	if err != nil {

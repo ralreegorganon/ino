@@ -1,16 +1,14 @@
 package ino
 
-import "log"
-
 type MonstahManager struct {
 	monstahs []*Monstah
 	DB       *DB
 }
 
-func NewMonstahManager(db *DB) *MonstahManager {
+func NewMonstahManager(db *DB) (*MonstahManager, error) {
 	feeds, err := db.GetFeeds()
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	monstahs := make([]*Monstah, len(feeds))
@@ -25,7 +23,7 @@ func NewMonstahManager(db *DB) *MonstahManager {
 		DB:       db,
 	}
 
-	return mm
+	return mm, nil
 }
 
 func (mm *MonstahManager) Shutdown() {
