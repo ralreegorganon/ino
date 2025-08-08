@@ -1,6 +1,6 @@
 module github.com/ralreegorganon/ino
 
-go 1.22.5
+go 1.24.5
 
 require (
 	github.com/go-chi/chi/v5 v5.1.0
@@ -21,10 +21,12 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/opencontainers/image-spec v1.1.0 // indirect
-	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/stretchr/testify v1.9.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.53.0 // indirect
 	go.opentelemetry.io/otel/trace v1.28.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
-	golang.org/x/sys v0.23.0 // indirect
 )
+
+replace github.com/ralreegorganon/nmeaais => ../nmeaais
+
+replace github.com/ralreegorganon/rudia => ../rudia
