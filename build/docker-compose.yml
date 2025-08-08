@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgis/postgis:16-3.4-alpine
+    image: postgis/postgis:17-3.5-alpine
     environment:
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
@@ -8,6 +8,8 @@ services:
       - ${DB_PORT_MIGRATION}:5432
     expose:
       - 5432
+    volumes:
+      - ino-db-data:/var/lib/postgresql/data
   ino:
     restart: always
     build: .
@@ -16,7 +18,10 @@ services:
     command: ino
     depends_on:
       - db
-    ports: 
-      - 8001:8989 
+    ports:
+      - 8001:8989
     expose:
-     - 8989
+      - 8989
+
+volumes:
+  ino-db-data:
