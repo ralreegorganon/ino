@@ -1,3 +1,4 @@
+-- +goose Up
 create table packet
 (
     packet_id serial not null,
@@ -5,3 +6,6 @@ create table packet
     created_at timestamp with time zone not null default now(),
     constraint packet_pkey primary key (packet_id)
 );
+
+-- +goose Down
+drop table packet;

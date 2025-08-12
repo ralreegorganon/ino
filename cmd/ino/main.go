@@ -7,13 +7,13 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
 
 	"github.com/ralreegorganon/ino"
 
-	"github.com/golang-migrate/migrate/v4"
-	_ "github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/pressly/goose/v3"
+	_ "github.com/lib/pq"
 )
 
 var version = flag.Bool("version", false, "Print version")
@@ -43,20 +43,19 @@ func main() {
 	}
 
 	migrationsPath := os.Getenv("INO_MIGRATIONS_PATH")
-	g, err := migrate.New(migrationsPath, connectionString)
-	if err != nil {
-		time.Sleep(30 * time.Second)
-		slog.Error("Couldn't create migrator", slog.Any("error", err))
-		os.Exit(1)
+	if migrationsPath == "" {
+		migrationsPath = "migrations"
+	} else if strings.HasPrefix(migrationsPath, "file://") {
+		migrationsPath = strings.TrimPrefix(migrationsPath, "file://")
 	}
 
-	if err = g.Up(); err != nil {
-		if err != migrate.ErrNoChange {
-			slog.Error("Couldn't migrate", slog.Any("error", err))
-			os.Exit(1)
-		} else {
-			slog.Info("Migrations up to date")
-		}
+	goose.SetDialect("postgres")
+	if err := goose.Up(db.DB.DB, migrationsPath); err != nil {
+		time.Sleep(30 * time.Second)
+		slog.Error("Couldn't run migrations", slog.Any("error", err))
+		os.Exit(1)
+	} else {
+		slog.Info("Migrations completed successfully")
 	}
 
 	mm, err := ino.NewMonstahManager(&db)

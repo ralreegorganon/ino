@@ -1,3 +1,4 @@
+-- +goose Up
 create table feed
 (
     feed_id serial not null,
@@ -7,4 +8,7 @@ create table feed
     constraint feed_pkey primary key (feed_id)
 );
 
-insert into feed (remote_address) values ('ais1.shipraiser.net:6494'); 
+insert into feed (remote_address) values ('ais1.shipraiser.net:6494');
+
+-- +goose Down
+drop table feed;

@@ -1,3 +1,4 @@
+-- +goose Up
 alter table message add column feed_id integer references feed (feed_id);
 alter table packet add column feed_id integer references feed (feed_id);
 
@@ -6,3 +7,7 @@ update packet set feed_id = (select feed_id from feed where remote_address = 'ai
 
 alter table message alter column feed_id set not null;
 alter table packet alter column feed_id set not null;
+
+-- +goose Down
+alter table message drop column feed_id;
+alter table packet drop column feed_id;

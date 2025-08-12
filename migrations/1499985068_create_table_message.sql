@@ -1,3 +1,4 @@
+-- +goose Up
 create table message
 (
     message_id serial not null,
@@ -7,3 +8,6 @@ create table message
     created_at timestamp with time zone not null default now(),
     constraint message_pkey primary key (message_id)
 );
+
+-- +goose Down
+drop table message;

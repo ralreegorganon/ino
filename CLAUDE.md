@@ -14,8 +14,8 @@ This is "ino", a Go application that processes NMEA AIS (Automatic Identificatio
 - `make install` - Install the binary to GOPATH/bin
 
 ### Database Operations  
-- `make migrate` - Run database migrations against local PostgreSQL
-- `make migrate-docker` - Run database migrations against dockerized PostgreSQL
+- `make migrate` - Run database migrations against local PostgreSQL using goose
+- `make migrate-docker` - Run database migrations against dockerized PostgreSQL using goose
 
 ### Docker Operations
 - `make docker` - Build Docker image
@@ -58,6 +58,7 @@ This is "ino", a Go application that processes NMEA AIS (Automatic Identificatio
 - Handles vessel metadata, positions (with geographic indexing), messages, packets, and feeds
 - Uses upsert patterns for vessel updates from different AIS message types
 - Provides both structured and raw JSON query methods
+- Database migrations managed by goose
 
 ### Data Flow
 1. Remote AIS feeds → Monstah (via rudia proxy) → NMEA decoder → Database
@@ -79,4 +80,4 @@ Key external libraries:
 - `github.com/ralreegorganon/rudia` - TCP connection proxying/management  
 - `github.com/jmoiron/sqlx` - Extended SQL operations
 - `github.com/go-chi/chi/v5` - HTTP router
-- `github.com/golang-migrate/migrate/v4` - Database migrations
+- `github.com/pressly/goose/v3` - Database migrations

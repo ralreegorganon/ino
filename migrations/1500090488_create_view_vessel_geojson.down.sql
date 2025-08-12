@@ -1,1 +1,0 @@
-drop view vessel_geojson;

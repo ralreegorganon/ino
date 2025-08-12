@@ -39,7 +39,7 @@ install:
 	go install $(GOBUILD_VERSION_ARGS) $(MAIN_PKG)
 
 migrate:
-	cd migrations/ && INO_CONNECTION_STRING="$(INO_CONNECTION_STRING_LOCAL)" ./run-migrations
+	goose -dir migrations postgres "$(INO_CONNECTION_STRING_LOCAL)" up
 
 docker:
 	mkdir -p build/migrations && cp migrations/*.sql build/migrations
@@ -55,7 +55,7 @@ stop-docker:
 	cd build/ && DB_USER=$(DB_USER) DB_PASSWORD=$(DB_PASSWORD) DB_PORT_MIGRATION=$(DB_PORT_MIGRATION) INO_CONNECTION_STRING="$(INO_CONNECTION_STRING_DOCKER)" docker compose -p ino stop
 
 migrate-docker:
-	cd migrations/ && INO_CONNECTION_STRING="$(INO_CONNECTION_STRING_MIGRATION_DOCKER)" ./run-migrations
+	goose -dir migrations postgres "$(INO_CONNECTION_STRING_MIGRATION_DOCKER)" up
 
 docker-logs: 
 	cd build/ && DB_USER=$(DB_USER) DB_PASSWORD=$(DB_PASSWORD) DB_PORT_MIGRATION=$(DB_PORT_MIGRATION) INO_CONNECTION_STRING="$(INO_CONNECTION_STRING_DOCKER)" docker compose -p ino logs

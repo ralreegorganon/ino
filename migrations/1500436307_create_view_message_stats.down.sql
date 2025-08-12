@@ -1,1 +1,0 @@
-drop vieww message_stats;
